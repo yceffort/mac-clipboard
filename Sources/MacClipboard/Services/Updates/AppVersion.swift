@@ -32,6 +32,10 @@ struct AppVersion: Comparable, CustomStringConvertible, Equatable {
         rawValue
     }
 
+    static func == (lhs: AppVersion, rhs: AppVersion) -> Bool {
+        (lhs < rhs) == false && (rhs < lhs) == false
+    }
+
     static func < (lhs: AppVersion, rhs: AppVersion) -> Bool {
         let maxCount = max(lhs.components.count, rhs.components.count)
 
