@@ -1,31 +1,30 @@
-.RECIPEPREFIX := >
 SHELL := /bin/zsh
 
 .PHONY: tools format format-check lint build test quality package
 
 tools:
->brew bundle install --file Brewfile
+	brew bundle install --file Brewfile
 
 format:
->./scripts/format.sh write
+	./scripts/format.sh write
 
 format-check:
->./scripts/format.sh check
+	./scripts/format.sh check
 
 lint:
->./scripts/lint.sh
+	./scripts/lint.sh
 
 build:
->./scripts/build.sh debug
+	./scripts/build.sh debug
 
 test:
->./scripts/test.sh
+	./scripts/test.sh
 
 quality:
->./scripts/format.sh check
->./scripts/lint.sh
->./scripts/build.sh debug
->./scripts/test.sh
+	./scripts/format.sh check
+	./scripts/lint.sh
+	./scripts/build.sh debug
+	./scripts/test.sh
 
 package:
->./scripts/package_app.sh
+	./scripts/package_app.sh
