@@ -47,6 +47,14 @@ final class AppSettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.settings.appearancePreference, .dark)
     }
 
+    func testLaunchAtLoginPreferenceUpdatesInMemoryState() {
+        let store = AppSettingsStore()
+
+        store.settings.launchAtLoginEnabled = true
+
+        XCTAssertTrue(store.settings.launchAtLoginEnabled)
+    }
+
     private func configureTemporarySupportDirectory() throws {
         let directoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

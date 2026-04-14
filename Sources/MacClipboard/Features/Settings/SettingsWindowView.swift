@@ -70,6 +70,16 @@ struct SettingsWindowView: View {
                                 set: { settingsStore.settings.openWindowOnLaunch = $0 }
                             )
                         )
+
+                        Divider()
+
+                        Toggle(
+                            "Launch automatically when you log in to macOS",
+                            isOn: Binding(
+                                get: { settingsStore.settings.launchAtLoginEnabled },
+                                set: { settingsStore.settings.launchAtLoginEnabled = $0 }
+                            )
+                        )
                     }
                 }
 

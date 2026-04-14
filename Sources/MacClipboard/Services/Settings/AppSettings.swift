@@ -130,6 +130,7 @@ struct AppSettings: Codable {
     var maxHistoryCount: Int = 200
     var autoPasteOnSelection: Bool = false
     var openWindowOnLaunch: Bool = true
+    var launchAtLoginEnabled: Bool = false
     var appearancePreference: AppearancePreference = .system
     var automaticUpdateChecksEnabled: Bool = true
     var lastUpdateCheckDate: Date?

@@ -22,7 +22,7 @@ Build a lightweight macOS app that:
 - searchable history with pinning, clear history, and recent items in the menu bar
 - clipboard capture for text, images, URLs, files, HTML, and rich text
 - restore-to-clipboard and optional auto-paste with accessibility guidance
-- settings for history size, startup behavior, ignored apps, and private mode
+- settings for history size, appearance, startup behavior, launch at login, ignored apps, and private mode
 - SQLite-backed persistence in `Application Support/yceffort Clipboard`
 
 ## Plan

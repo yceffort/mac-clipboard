@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let historyStore = HistoryStore()
     private let settingsStore = AppSettingsStore()
     private let loopProtector = ClipboardLoopProtector()
+    private let launchAtLoginManager = LaunchAtLoginManager()
 
     private lazy var pasteService = PasteService(loopProtector: loopProtector)
 
@@ -20,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         historyStore.loadPersistedItems()
         historyStore.configure(maxItems: settingsStore.settings.maxHistoryCount)
+        settingsStore.settings.launchAtLoginEnabled = launchAtLoginManager.isEnabled
         applyAppearancePreference(settingsStore.settings.appearancePreference)
 
         let windowController = HistoryWindowController(
@@ -154,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 hotkeyManager?.register(shortcut: settings.shortcutPreset)
                 menuBarController?.updateShortcutTitle(settings.shortcutPreset.title)
                 updateService?.scheduleAutomaticChecks()
+                launchAtLoginManager.setEnabled(settings.launchAtLoginEnabled)
                 applyAppearancePreference(settings.appearancePreference)
             }
             .store(in: &cancellables)
