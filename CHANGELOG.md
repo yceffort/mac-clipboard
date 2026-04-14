@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-04-14
+
+### Fixed
+
+- make semantic app version equality consistent
+
+
+
 ## [0.1.1] - 2026-04-14
 
 - Added a launch-at-login setting for the installed app and wired it to macOS login via LaunchAgents.
