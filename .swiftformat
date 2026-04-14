@@ -1,0 +1,12 @@
+--swiftversion 6.0
+--indent 4
+--maxwidth 120
+--wraparguments preserve
+--wrapparameters preserve
+--wrapcollections preserve
+--closingparen balanced
+--commas always
+--stripunusedargs closure-only
+--self remove
+--ifdef no-indent
+--header ignore

@@ -1,0 +1,14 @@
+name: Quality
+description: Format, lint, build, and test the Swift package.
+
+runs:
+  using: composite
+  steps:
+    - name: Install quality tools
+      shell: bash
+      run: |
+        brew bundle --file Brewfile --no-lock
+
+    - name: Run quality pipeline
+      shell: bash
+      run: make quality
