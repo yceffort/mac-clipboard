@@ -1,32 +1,67 @@
 import AppKit
-import ApplicationServices
+@preconcurrency import ApplicationServices
 import Carbon.HIToolbox
+import Combine
 
 @MainActor
-final class PasteService {
+final class PasteService: ObservableObject {
+    @Published private(set) var canAutoPaste: Bool
+
     private let toastService: ToastService
     private let loopProtector: ClipboardLoopProtector
+    private var targetApplication: NSRunningApplication?
     private let accessibilitySettingsURL =
         URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+    private var notificationObservers: [NSObjectProtocol] = []
+    private var permissionRefreshTask: Task<Void, Never>?
 
     init(
         toastService: ToastService = ToastService(),
         loopProtector: ClipboardLoopProtector
     ) {
+        canAutoPaste = AXIsProcessTrusted()
         self.toastService = toastService
         self.loopProtector = loopProtector
-    }
-
-    var canAutoPaste: Bool {
-        AXIsProcessTrusted()
+        installPermissionObservers()
     }
 
     func openAccessibilitySettings() {
+        let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+        let options = [promptKey: true] as CFDictionary
+
+        if AXIsProcessTrustedWithOptions(options) {
+            refreshAccessibilityPermission()
+            return
+        }
+
         guard let accessibilitySettingsURL else {
             return
         }
 
         NSWorkspace.shared.open(accessibilitySettingsURL)
+        startPollingAccessibilityPermission()
+    }
+
+    func refreshAccessibilityPermission() {
+        let isTrusted = AXIsProcessTrusted()
+
+        guard canAutoPaste != isTrusted else {
+            return
+        }
+
+        canAutoPaste = isTrusted
+    }
+
+    func capturePotentialPasteTarget() {
+        guard let frontmostApplication = NSWorkspace.shared.frontmostApplication else {
+            return
+        }
+
+        guard frontmostApplication.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            return
+        }
+
+        targetApplication = frontmostApplication
     }
 
     @discardableResult
@@ -98,7 +133,7 @@ final class PasteService {
             return true
         }
 
-        triggerPasteShortcut()
+        scheduleAutoPaste()
         return true
     }
 
@@ -123,5 +158,75 @@ final class PasteService {
 
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
+    }
+
+    private func installPermissionObservers() {
+        let center = NotificationCenter.default
+
+        notificationObservers.append(
+            center.addObserver(
+                forName: NSApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.refreshAccessibilityPermission()
+                }
+            }
+        )
+    }
+
+    private func startPollingAccessibilityPermission() {
+        permissionRefreshTask?.cancel()
+
+        permissionRefreshTask = Task { @MainActor in
+            for _ in 0 ..< 20 {
+                refreshAccessibilityPermission()
+
+                if canAutoPaste {
+                    return
+                }
+
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+        }
+    }
+
+    private func scheduleAutoPaste() {
+        let applicationToActivate = resolvedTargetApplication()
+
+        Task { @MainActor in
+            if let applicationToActivate {
+                applicationToActivate.activate(options: [.activateIgnoringOtherApps])
+            }
+
+            try? await Task.sleep(for: .milliseconds(180))
+            refreshAccessibilityPermission()
+
+            guard canAutoPaste else {
+                return
+            }
+
+            triggerPasteShortcut()
+        }
+    }
+
+    private func resolvedTargetApplication() -> NSRunningApplication? {
+        if let targetApplication,
+           targetApplication.isTerminated == false,
+           targetApplication.bundleIdentifier != Bundle.main.bundleIdentifier
+        {
+            return targetApplication
+        }
+
+        guard let frontmostApplication = NSWorkspace.shared.frontmostApplication else {
+            return nil
+        }
+
+        guard frontmostApplication.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            return nil
+        }
+
+        return frontmostApplication
     }
 }

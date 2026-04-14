@@ -62,7 +62,11 @@ struct LaunchAtLoginManager {
 
         let fileManager = FileManager.default
         let candidateURLs = [
+            URL(fileURLWithPath: "/Applications/yc.clipboard.app"),
             URL(fileURLWithPath: "/Applications/yceffort Clipboard.app"),
+            fileManager.homeDirectoryForCurrentUser
+                .appendingPathComponent("Applications", isDirectory: true)
+                .appendingPathComponent("yc.clipboard.app"),
             fileManager.homeDirectoryForCurrentUser
                 .appendingPathComponent("Applications", isDirectory: true)
                 .appendingPathComponent("yceffort Clipboard.app"),

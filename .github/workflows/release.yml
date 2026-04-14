@@ -99,16 +99,16 @@ jobs:
           TAG: ${{ steps.release_meta.outputs.tag }}
           NOTES_PATH: ${{ steps.release_meta.outputs.notes_path }}
         run: |
-          APP_ARCHIVE_PATH="dist/yceffort Clipboard-$VERSION.zip"
-          APP_DMG_PATH="dist/yceffort Clipboard-$VERSION.dmg"
+          APP_ARCHIVE_PATH="dist/yc.clipboard-$VERSION.zip"
+          APP_DMG_PATH="dist/yc.clipboard-$VERSION.dmg"
           TARGET_SHA="$(git rev-parse HEAD)"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "yceffort Clipboard $VERSION" --notes-file "$NOTES_PATH"
+            gh release edit "$TAG" --title "yc.clipboard $VERSION" --notes-file "$NOTES_PATH"
             gh release upload "$TAG" "$APP_ARCHIVE_PATH" "$APP_DMG_PATH" --clobber
           else
             gh release create "$TAG" "$APP_ARCHIVE_PATH" "$APP_DMG_PATH" \
-              --title "yceffort Clipboard $VERSION" \
+              --title "yc.clipboard $VERSION" \
               --notes-file "$NOTES_PATH" \
               --target "$TARGET_SHA"
           fi

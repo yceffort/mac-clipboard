@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-APP_NAME="yceffort Clipboard"
+APP_NAME="yc.clipboard"
 APP_BUNDLE_PATH="$ROOT_DIR/dist/$APP_NAME.app"
 VERSION="$(tr -d '[:space:]' < "$ROOT_DIR/version.txt")"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
@@ -71,6 +71,9 @@ cat > "$APP_BUNDLE_PATH/Contents/Info.plist" <<EOF
 </dict>
 </plist>
 EOF
+
+/usr/bin/codesign --force --deep --sign - "$APP_BUNDLE_PATH"
+/usr/bin/codesign --verify --deep --strict "$APP_BUNDLE_PATH"
 
 echo "Packaged app at: $APP_BUNDLE_PATH"
 

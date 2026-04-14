@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${1:?Usage: prepare_release.sh <version> [build-number]}"
 BUILD_NUMBER="${2:-1}"
-APP_NAME="yceffort Clipboard"
+APP_NAME="yc.clipboard"
 APP_PATH="$ROOT_DIR/dist/$APP_NAME.app"
 DMG_PATH="$ROOT_DIR/dist/$APP_NAME-$VERSION.dmg"
 ZIP_PATH="$ROOT_DIR/dist/$APP_NAME-$VERSION.zip"

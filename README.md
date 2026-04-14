@@ -2,7 +2,7 @@
 
 A native macOS clipboard manager inspired by Maccy.
 
-Current display name: `yceffort Clipboard`
+Current display name: `yc.clipboard`
 
 ## Goal
 
@@ -23,7 +23,7 @@ Build a lightweight macOS app that:
 - clipboard capture for text, images, URLs, files, HTML, and rich text
 - restore-to-clipboard and optional auto-paste with accessibility guidance
 - settings for history size, appearance, startup behavior, launch at login, ignored apps, and private mode
-- SQLite-backed persistence in `Application Support/yceffort Clipboard`
+- SQLite-backed persistence in `Application Support/yceffort Clipboard` for migration compatibility
 
 ## Plan
 
@@ -68,7 +68,7 @@ For packaging helpers that are still easier as shell entrypoints:
 To build a local `.app` bundle, zipped archive, and installable DMG:
 
 - run [scripts/package_app.sh](/Users/yceffort/private/mac-clipboard/scripts/package_app.sh)
-- the outputs will appear at `dist/yceffort Clipboard.app`, `dist/yceffort Clipboard-<version>.zip`, and `dist/yceffort Clipboard-<version>.dmg`
+- the outputs will appear at `dist/yc.clipboard.app`, `dist/yc.clipboard-<version>.zip`, and `dist/yc.clipboard-<version>.dmg`
 - the package script also generates and embeds a native app icon automatically
 
 The package version comes from [version.txt](/Users/yceffort/private/mac-clipboard/version.txt).

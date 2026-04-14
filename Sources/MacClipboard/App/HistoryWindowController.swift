@@ -4,8 +4,11 @@ import SwiftUI
 @MainActor
 final class HistoryWindowController: NSWindowController {
     private var escapeKeyMonitor: Any?
+    private let pasteService: PasteService
 
     init(historyStore: HistoryStore, settingsStore: AppSettingsStore, pasteService: PasteService) {
+        self.pasteService = pasteService
+
         let rootView = HistoryWindowView(
             historyStore: historyStore,
             settingsStore: settingsStore,
@@ -34,6 +37,7 @@ final class HistoryWindowController: NSWindowController {
     }
 
     override func showWindow(_ sender: Any?) {
+        pasteService.capturePotentialPasteTarget()
         super.showWindow(sender)
         window?.makeKeyAndOrderFront(sender)
         NSApp.activate(ignoringOtherApps: true)

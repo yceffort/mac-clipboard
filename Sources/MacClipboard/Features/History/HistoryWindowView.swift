@@ -4,7 +4,7 @@ import SwiftUI
 struct HistoryWindowView: View {
     @ObservedObject var historyStore: HistoryStore
     @ObservedObject var settingsStore: AppSettingsStore
-    let pasteService: PasteService
+    @ObservedObject var pasteService: PasteService
 
     @State private var query = ""
     @State private var selection: ClipboardItem.ID?
@@ -31,10 +31,6 @@ struct HistoryWindowView: View {
             sidebar
                 .frame(minWidth: 330, idealWidth: 360, maxWidth: 420)
                 .padding(.trailing, 18)
-                .overlay(alignment: .trailing) {
-                    Divider()
-                        .padding(.vertical, 2)
-                }
 
             previewPane
                 .frame(minWidth: 420)
@@ -51,10 +47,11 @@ struct HistoryWindowView: View {
 
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This removes all saved text and image items from yceffort Clipboard.")
+            Text("This removes all saved text and image items from \(AppMetadata.displayName).")
         }
         .onAppear {
             adoptFirstSelectionIfNeeded()
+            pasteService.refreshAccessibilityPermission()
         }
         .onChange(of: query) { _, _ in
             adoptFirstSelectionIfNeeded()

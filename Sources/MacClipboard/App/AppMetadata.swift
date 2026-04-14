@@ -1,7 +1,8 @@
 import Foundation
 
 enum AppMetadata {
-    static let displayName = "yceffort Clipboard"
+    static let displayName = "yc.clipboard"
+    // Keep the existing Application Support directory so updates do not lose history or settings.
     static let supportDirectoryName = "yceffort Clipboard"
     static let repositoryOwner = "yceffort"
     static let repositoryName = "mac-clipboard"
