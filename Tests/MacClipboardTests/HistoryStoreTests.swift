@@ -79,7 +79,7 @@ final class HistoryStoreTests: XCTestCase {
         )
     }
 
-    nonisolated private func configureTemporarySupportDirectory() throws {
+    private nonisolated func configureTemporarySupportDirectory() throws {
         let directoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
