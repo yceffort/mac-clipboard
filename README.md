@@ -84,11 +84,24 @@ GitHub release automation is set up for `main`:
 - when a release is created, the workflow packages the macOS app on an Apple Silicon macOS runner and uploads both the zip and DMG artifacts to the GitHub release
 - if Apple signing secrets are present, the same workflow signs the app, notarizes the DMG, and staples both artifacts
 
+### When A Release Happens
+
+- a pull request merge alone does not guarantee a release
+- a new release is created when commits pushed to `main` include at least one releasable Conventional Commit
+- commits such as `chore:`, `docs:`, `style:`, `test:`, or `ci:` do not create a release by themselves
+
 Version bumps follow this rule set:
 
 - `feat:` -> minor
 - `fix:`, `perf:`, `refactor:`, `revert:` -> patch
 - any `!` commit or `BREAKING CHANGE:` footer -> major
+
+Examples:
+
+- `feat: add clipboard deduplication` -> `0.1.0` to `0.2.0`
+- `fix: close history window on escape` -> `0.2.0` to `0.2.1`
+- `feat!: change storage format` -> next major release
+- `chore: update README` -> no release
 
 This setup treats [version.txt](/Users/yceffort/private/mac-clipboard/version.txt) `0.1.0` as the current baseline. Create the initial tag once before relying on automated releases so the first automatic release starts from the right version.
 
