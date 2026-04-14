@@ -55,7 +55,7 @@ final class AppSettingsStoreTests: XCTestCase {
         XCTAssertTrue(store.settings.launchAtLoginEnabled)
     }
 
-    private func configureTemporarySupportDirectory() throws {
+    nonisolated private func configureTemporarySupportDirectory() throws {
         let directoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
