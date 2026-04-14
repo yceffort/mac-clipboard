@@ -61,6 +61,26 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertEqual(store.items.last?.contentHash, secondItem.contentHash)
     }
 
+    func testRemoveDeletesOnlyTheRequestedItem() {
+        let store = HistoryStore()
+        let firstItem = makeTextItem(
+            id: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
+            hash: "hash-a",
+            text: "A"
+        )
+        let secondItem = makeTextItem(
+            id: "11111111-2222-3333-4444-555555555555",
+            hash: "hash-b",
+            text: "B"
+        )
+
+        store.capture(firstItem)
+        store.capture(secondItem)
+
+        XCTAssertTrue(store.remove(secondItem))
+        XCTAssertEqual(store.items.map(\.id), [firstItem.id])
+    }
+
     private func makeTextItem(id: String, hash: String, text: String) -> ClipboardItem {
         ClipboardItem(
             id: UUID(uuidString: id) ?? UUID(),

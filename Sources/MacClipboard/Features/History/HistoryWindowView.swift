@@ -146,6 +146,16 @@ struct HistoryWindowView: View {
                         metadataLine(for: item)
                         Spacer()
                         HStack(spacing: 8) {
+                            Button(role: .destructive) {
+                                delete(item)
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .buttonStyle(.borderless)
+                            .controlSize(.small)
+                            .foregroundStyle(.red)
+                            .help("Delete this clipboard item")
+
                             Button(item.isPinned ? "Unpin" : "Pin") {
                                 historyStore.togglePinned(item)
                             }
@@ -402,6 +412,17 @@ struct HistoryWindowView: View {
     private func clearHistory() {
         historyStore.clearAll()
         selection = nil
+    }
+
+    private func delete(_ item: ClipboardItem) {
+        guard historyStore.remove(item) else {
+            return
+        }
+
+        if selection == item.id {
+            selection = nil
+            adoptFirstSelectionIfNeeded()
+        }
     }
 
     private func closeWindow() {

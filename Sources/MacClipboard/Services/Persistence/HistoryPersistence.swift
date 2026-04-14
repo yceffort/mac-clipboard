@@ -372,6 +372,18 @@ final class HistoryStore: ObservableObject {
         schedulePersist()
     }
 
+    @discardableResult
+    func remove(_ item: ClipboardItem) -> Bool {
+        guard let itemIndex = items.firstIndex(where: { $0.id == item.id }) else {
+            return false
+        }
+
+        let removedItem = items.remove(at: itemIndex)
+        removedItem.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
+        schedulePersist()
+        return true
+    }
+
     func search(matching query: String) -> [ClipboardItem] {
         let normalizedQuery =
             query
