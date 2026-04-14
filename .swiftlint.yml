@@ -11,6 +11,8 @@ excluded:
 
 disabled_rules:
   - todo
+  - opening_brace
+  - trailing_comma
 
 opt_in_rules:
   - empty_count
@@ -36,10 +38,18 @@ function_body_length:
   warning: 120
   error: 160
 
+cyclomatic_complexity:
+  warning: 20
+  error: 30
+
 identifier_name:
   min_length: 1
+  max_length:
+    warning: 60
+    error: 80
   excluded:
     - id
     - x
     - y
     - db
+    - SQLITE_TRANSIENT
