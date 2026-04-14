@@ -8,7 +8,7 @@ SWIFTFORMAT_BIN="${SWIFTFORMAT_BIN:-swiftformat}"
 
 if ! command -v "$SWIFTFORMAT_BIN" >/dev/null 2>&1; then
   echo "swiftformat is required." >&2
-  echo "Install it with: brew bundle --file Brewfile --no-lock" >&2
+  echo "Install it with: brew bundle install --file Brewfile" >&2
   exit 1
 fi
 

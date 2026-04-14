@@ -38,7 +38,7 @@ Open [Package.swift](/Users/yceffort/private/mac-clipboard/Package.swift) in Xco
 For local CLI tools, install the repo's macOS dependencies once with [Brewfile](/Users/yceffort/private/mac-clipboard/Brewfile):
 
 ```bash
-brew bundle --file Brewfile --no-lock
+brew bundle install --file Brewfile
 ```
 
 The repo uses a small [Makefile](/Users/yceffort/private/mac-clipboard/Makefile) as the task runner, which is a more typical fit for a Swift project than `npm`.

@@ -4,7 +4,7 @@ SHELL := /bin/zsh
 .PHONY: tools format format-check lint build test quality package
 
 tools:
->brew bundle --file Brewfile --no-lock
+>brew bundle install --file Brewfile
 
 format:
 >./scripts/format.sh write
