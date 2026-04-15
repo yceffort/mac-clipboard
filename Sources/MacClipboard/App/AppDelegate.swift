@@ -19,6 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.mainMenu = makeMainMenu()
+
         historyStore.loadPersistedItems()
         historyStore.configure(maxItems: settingsStore.settings.maxHistoryCount)
         settingsStore.settings.launchAtLoginEnabled = launchAtLoginManager.isEnabled
@@ -44,6 +46,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menuBarController = MenuBarController(
             initialMonitoringEnabled: monitor.isRunning,
             shortcutTitle: settingsStore.settings.shortcutPreset.title,
+            openAbout: { [weak self] in
+                Task { @MainActor in
+                    self?.showAboutPanel()
+                }
+            },
             openSettings: { [weak self] in
                 Task { @MainActor in
                     self?.showSettingsWindow()
@@ -105,12 +112,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    @objc
+    private func showAboutPanelAction(_ sender: Any?) {
+        showAboutPanel()
+    }
+
+    @objc
+    private func openSettingsAction(_ sender: Any?) {
+        showSettingsWindow()
+    }
+
+    @objc
+    private func checkForUpdatesAction(_ sender: Any?) {
+        updateService?.checkForUpdates()
+    }
+
+    @objc
+    private func terminateApplicationAction(_ sender: Any?) {
+        NSApp.terminate(sender)
+    }
+
     private func showHistoryWindow() {
         historyWindowController?.showWindow(nil)
     }
 
     private func showSettingsWindow() {
         settingsWindowController?.showWindow(nil)
+    }
+
+    private func showAboutPanel() {
+        var options: [NSApplication.AboutPanelOptionKey: Any] = [
+            .applicationName: AppMetadata.displayName,
+            .applicationVersion: AppMetadata.currentVersionString,
+            .version: AppMetadata.currentVersionString,
+            .credits: NSAttributedString(
+                string: "Contact\n\(AppMetadata.supportEmail)",
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: 12),
+                    .foregroundColor: NSColor.secondaryLabelColor,
+                ]
+            ),
+        ]
+
+        if let applicationIcon = NSApp.applicationIconImage {
+            options[.applicationIcon] = applicationIcon
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(options: options)
     }
 
     private func toggleMonitoring() {
@@ -181,5 +230,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.appearance = appearance
         historyWindowController?.window?.appearance = appearance
         settingsWindowController?.window?.appearance = appearance
+    }
+
+    private func makeMainMenu() -> NSMenu {
+        let mainMenu = NSMenu(title: "Main Menu")
+
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu(title: AppMetadata.displayName)
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        let aboutItem = NSMenuItem(
+            title: "About \(AppMetadata.displayName)",
+            action: #selector(showAboutPanelAction(_:)),
+            keyEquivalent: ""
+        )
+        aboutItem.target = self
+        appMenu.addItem(aboutItem)
+
+        appMenu.addItem(.separator())
+
+        let settingsItem = NSMenuItem(
+            title: "Settings…",
+            action: #selector(openSettingsAction(_:)),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        appMenu.addItem(settingsItem)
+
+        let updatesItem = NSMenuItem(
+            title: "Check for Updates…",
+            action: #selector(checkForUpdatesAction(_:)),
+            keyEquivalent: ""
+        )
+        updatesItem.target = self
+        appMenu.addItem(updatesItem)
+
+        appMenu.addItem(.separator())
+
+        let quitItem = NSMenuItem(
+            title: "Quit \(AppMetadata.displayName)",
+            action: #selector(terminateApplicationAction(_:)),
+            keyEquivalent: "q"
+        )
+        quitItem.target = self
+        quitItem.keyEquivalentModifierMask = [.command]
+        appMenu.addItem(quitItem)
+
+        return mainMenu
     }
 }

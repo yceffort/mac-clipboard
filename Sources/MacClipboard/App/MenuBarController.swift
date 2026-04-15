@@ -4,6 +4,7 @@ import AppKit
 final class MenuBarController: NSObject {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
+    private let openAbout: () -> Void
     private let openSettings: () -> Void
     private let openHistory: () -> Void
     private let checkForUpdates: () -> Void
@@ -22,6 +23,7 @@ final class MenuBarController: NSObject {
     init(
         initialMonitoringEnabled: Bool,
         shortcutTitle: String,
+        openAbout: @escaping () -> Void,
         openSettings: @escaping () -> Void,
         openHistory: @escaping () -> Void,
         checkForUpdates: @escaping () -> Void,
@@ -30,6 +32,7 @@ final class MenuBarController: NSObject {
         selectRecentItem: @escaping (ClipboardItem) -> Void,
         quit: @escaping () -> Void
     ) {
+        self.openAbout = openAbout
         self.openSettings = openSettings
         self.openHistory = openHistory
         self.checkForUpdates = checkForUpdates
@@ -63,6 +66,11 @@ final class MenuBarController: NSObject {
     @objc
     private func openHistoryAction() {
         openHistory()
+    }
+
+    @objc
+    private func openAboutAction() {
+        openAbout()
     }
 
     @objc
@@ -113,6 +121,14 @@ final class MenuBarController: NSObject {
         openHistoryItem.target = self
         menu.addItem(openHistoryItem)
 
+        let aboutItem = NSMenuItem(
+            title: "About \(AppMetadata.displayName)",
+            action: #selector(openAboutAction),
+            keyEquivalent: ""
+        )
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
         let settingsItem = NSMenuItem(
             title: "Settings",
             action: #selector(openSettingsAction),
@@ -162,7 +178,7 @@ final class MenuBarController: NSObject {
         }
 
         monitoringMenuItem.title = isMonitoringEnabled ? "Pause Monitoring" : "Resume Monitoring"
-        monitoringMenuItem.state = isMonitoringEnabled ? .on : .off
+        monitoringMenuItem.state = .off
         monitoringMenuItem.target = self
         monitoringMenuItem.action = #selector(toggleMonitoringAction)
         menu.addItem(monitoringMenuItem)

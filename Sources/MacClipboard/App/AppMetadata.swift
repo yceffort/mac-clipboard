@@ -2,6 +2,7 @@ import Foundation
 
 enum AppMetadata {
     static let displayName = "yc.clipboard"
+    static let supportEmail = "root@yceffort.kr"
     // Keep the existing Application Support directory so updates do not lose history or settings.
     static let supportDirectoryName = "yceffort Clipboard"
     static let repositoryOwner = "yceffort"
