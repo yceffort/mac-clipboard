@@ -85,8 +85,18 @@ struct SettingsWindowView: View {
 
                 Divider()
 
-                section("Updates", detail: "Keep the app aligned with the latest GitHub release.") {
+                section("About", detail: "App identity, version, and release links.") {
                     VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Text("App name")
+                            Spacer()
+                            Text(AppMetadata.displayName)
+                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Divider()
+
                         HStack {
                             Text("Current version")
                             Spacer()
@@ -97,6 +107,16 @@ struct SettingsWindowView: View {
 
                         Divider()
 
+                        Link("Open GitHub Releases", destination: AppMetadata.releasesPageURL)
+                            .buttonStyle(.link)
+                            .font(.system(size: 12))
+                    }
+                }
+
+                Divider()
+
+                section("Updates", detail: "Keep the app aligned with the latest GitHub release.") {
+                    VStack(alignment: .leading, spacing: 14) {
                         Toggle(
                             "Check GitHub Releases for updates automatically once a day",
                             isOn: Binding(

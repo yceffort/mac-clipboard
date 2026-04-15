@@ -79,7 +79,7 @@ final class PasteService: ObservableObject {
 
         case .image:
             guard let imagePath = item.imagePath,
-                  let image = NSImage(contentsOfFile: imagePath)
+                  let image = ClipboardImageCache.shared.image(forPath: imagePath)
             else {
                 return false
             }
