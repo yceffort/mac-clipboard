@@ -418,6 +418,10 @@ final class HistoryStore: ObservableObject {
 
     private let persistence = HistoryPersistence()
     private let assetStore = ClipboardAssetStore()
+    private let persistenceQueue = DispatchQueue(
+        label: "com.yceffort.clipboard.history-persistence",
+        qos: .utility
+    )
     private var maxItems = 200
     private var pendingPersistTask: Task<Void, Never>?
 
@@ -521,13 +525,14 @@ final class HistoryStore: ObservableObject {
     func persistNow() {
         pendingPersistTask?.cancel()
         pendingPersistTask = nil
+        pendingUpsertIDs.removeAll(keepingCapacity: false)
+        pendingDeleteIDs.removeAll(keepingCapacity: false)
 
-        let changes = extractPendingChanges()
-        guard changes.upserts.isEmpty == false || changes.deletedIDs.isEmpty == false else {
-            return
+        let snapshot = items
+        let persistenceHandle = persistence
+        persistenceQueue.sync {
+            try? persistenceHandle.save(items: snapshot)
         }
-
-        try? persistence.applyChanges(upserts: changes.upserts, deletedIDs: changes.deletedIDs)
     }
 
     func clearAll() {
@@ -541,7 +546,10 @@ final class HistoryStore: ObservableObject {
         }
 
         items = []
-        try? persistence.save(items: [])
+        let persistenceHandle = persistence
+        persistenceQueue.sync {
+            try? persistenceHandle.save(items: [])
+        }
     }
 
     func configure(maxItems: Int) {
@@ -576,7 +584,7 @@ final class HistoryStore: ObservableObject {
             }
 
             let persistenceHandle = persistence
-            Task.detached(priority: .utility) {
+            persistenceQueue.async {
                 try? persistenceHandle.applyChanges(
                     upserts: changes.upserts,
                     deletedIDs: changes.deletedIDs
