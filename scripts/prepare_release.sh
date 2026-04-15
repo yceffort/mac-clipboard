@@ -39,6 +39,7 @@ if [[ -n "${APPLE_SIGNING_IDENTITY:-}" ]]; then
 
   /usr/bin/codesign \
     --force \
+    --keychain "$KEYCHAIN_PATH" \
     --timestamp \
     --options runtime \
     --sign "$APPLE_SIGNING_IDENTITY" \
@@ -46,11 +47,13 @@ if [[ -n "${APPLE_SIGNING_IDENTITY:-}" ]]; then
 
   /usr/bin/codesign \
     --force \
+    --keychain "$KEYCHAIN_PATH" \
     --timestamp \
     --options runtime \
     --sign "$APPLE_SIGNING_IDENTITY" \
     "$APP_PATH"
 
+  /usr/bin/codesign --display --verbose=4 "$EXECUTABLE_PATH"
   /usr/bin/codesign --verify --deep --strict "$APP_PATH"
 
   rm -f "$ZIP_PATH"
