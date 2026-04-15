@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.4] - 2026-04-15
+
+### Fixed
+
+- rebuild the dmg after signing the app
+- 
+force Developer ID signing from the temporary keychain
+- 
+sign the app executable for notarization
+- 
+log notarization failures and staple the dmg
+- 
+add standard app menu and about panel
+
+
+
 ## [0.3.3] - 2026-04-15
 
 ### Fixed
