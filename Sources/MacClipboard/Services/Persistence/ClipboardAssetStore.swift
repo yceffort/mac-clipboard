@@ -19,6 +19,7 @@ struct ClipboardAssetStore {
             return
         }
 
+        ClipboardImageCache.shared.invalidate(path: path)
         try? FileManager.default.removeItem(atPath: path)
     }
 }
