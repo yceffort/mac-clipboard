@@ -179,12 +179,12 @@ final class ClipboardMonitor {
                     return
                 }
 
-                if loopProtector?.shouldIgnore(hash: item.contentHash) == true {
+                if self.loopProtector?.shouldIgnore(hash: item.contentHash) == true {
                     item.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
                     return
                 }
 
-                historyStore.capture(item)
+                self.historyStore.capture(item)
             }
         }
 
