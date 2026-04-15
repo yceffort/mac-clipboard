@@ -7,6 +7,7 @@ VERSION="${1:?Usage: prepare_release.sh <version> [build-number]}"
 BUILD_NUMBER="${2:-1}"
 APP_NAME="yc.clipboard"
 APP_PATH="$ROOT_DIR/dist/$APP_NAME.app"
+EXECUTABLE_PATH="$APP_PATH/Contents/MacOS/$APP_NAME"
 DMG_PATH="$ROOT_DIR/dist/$APP_NAME-$VERSION.dmg"
 ZIP_PATH="$ROOT_DIR/dist/$APP_NAME-$VERSION.zip"
 KEYCHAIN_PATH="$ROOT_DIR/.build/signing.keychain-db"
@@ -35,6 +36,13 @@ if [[ -n "${APPLE_SIGNING_IDENTITY:-}" ]]; then
     security set-key-partition-list -S apple-tool:,apple: -s -k "$APPLE_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
     security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
   fi
+
+  /usr/bin/codesign \
+    --force \
+    --timestamp \
+    --options runtime \
+    --sign "$APPLE_SIGNING_IDENTITY" \
+    "$EXECUTABLE_PATH"
 
   /usr/bin/codesign \
     --force \
