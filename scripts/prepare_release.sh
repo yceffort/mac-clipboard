@@ -10,6 +10,7 @@ APP_PATH="$ROOT_DIR/dist/$APP_NAME.app"
 EXECUTABLE_PATH="$APP_PATH/Contents/MacOS/$APP_NAME"
 DMG_PATH="$ROOT_DIR/dist/$APP_NAME-$VERSION.dmg"
 ZIP_PATH="$ROOT_DIR/dist/$APP_NAME-$VERSION.zip"
+DMG_STAGING_PATH="$ROOT_DIR/dist/.signed-dmg-root"
 KEYCHAIN_PATH="$ROOT_DIR/.build/signing.keychain-db"
 CERTIFICATE_PATH="$ROOT_DIR/.build/developer-id.p12"
 NOTARY_KEY_PATH="$ROOT_DIR/.build/AuthKey_${APPLE_NOTARY_KEY_ID:-missing}.p8"
@@ -58,6 +59,21 @@ if [[ -n "${APPLE_SIGNING_IDENTITY:-}" ]]; then
 
   rm -f "$ZIP_PATH"
   /usr/bin/ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+
+  rm -rf "$DMG_STAGING_PATH"
+  mkdir -p "$DMG_STAGING_PATH"
+  cp -R "$APP_PATH" "$DMG_STAGING_PATH/"
+  ln -s /Applications "$DMG_STAGING_PATH/Applications"
+
+  rm -f "$DMG_PATH"
+  /usr/bin/hdiutil create \
+    -volname "$APP_NAME" \
+    -srcfolder "$DMG_STAGING_PATH" \
+    -ov \
+    -format UDZO \
+    "$DMG_PATH"
+
+  rm -rf "$DMG_STAGING_PATH"
 
   /usr/bin/codesign --force --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$DMG_PATH"
   /usr/bin/codesign --verify --strict "$DMG_PATH"
