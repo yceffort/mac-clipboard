@@ -425,6 +425,13 @@ final class HistoryStore: ObservableObject {
     private var maxItems = 200
     private var pendingPersistTask: Task<Void, Never>?
 
+    /// Cached lowercased searchable text keyed by item id.
+    ///
+    /// The model's `searchableText` property joins several strings and lowercases them,
+    /// which was previously recomputed for every item on every keystroke. Caching it per
+    /// item avoids the repeated allocation + case folding work during filtering.
+    private var searchIndex: [UUID: String] = [:]
+
     /// Ids of items whose row contents should be re-written on the next persist flush.
     private var pendingUpsertIDs: Set<UUID> = []
 
@@ -434,6 +441,7 @@ final class HistoryStore: ObservableObject {
     func loadPersistedItems() {
         items = sortItems(persistence.loadItems())
         enforceItemLimit()
+        rebuildSearchIndex()
     }
 
     func capture(_ item: ClipboardItem) {
@@ -449,6 +457,7 @@ final class HistoryStore: ObservableObject {
             capturedItem.isPinned = duplicate.isPinned
             capturedItem.lastUsedAt = duplicate.lastUsedAt
             markItemDeleted(id: duplicate.id)
+            searchIndex.removeValue(forKey: duplicate.id)
 
             for oldAssetPath in duplicate.storedAssetPaths
                 where capturedItem.storedAssetPaths.contains(oldAssetPath) == false
@@ -463,11 +472,13 @@ final class HistoryStore: ObservableObject {
         while nextItems.count > maxItems {
             let removed = nextItems.removeLast()
             markItemDeleted(id: removed.id)
+            searchIndex.removeValue(forKey: removed.id)
             removed.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
         }
 
         items = nextItems
         markItemChanged(id: capturedItem.id)
+        searchIndex[capturedItem.id] = capturedItem.searchableText
         schedulePersist()
     }
 
@@ -502,6 +513,7 @@ final class HistoryStore: ObservableObject {
 
         let removedItem = items.remove(at: itemIndex)
         markItemDeleted(id: removedItem.id)
+        searchIndex.removeValue(forKey: removedItem.id)
         removedItem.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
         schedulePersist()
         return true
@@ -518,7 +530,7 @@ final class HistoryStore: ObservableObject {
         }
 
         return items.filter { item in
-            item.searchableText.contains(normalizedQuery)
+            (searchIndex[item.id] ?? item.searchableText).contains(normalizedQuery)
         }
     }
 
@@ -546,6 +558,7 @@ final class HistoryStore: ObservableObject {
         }
 
         items = []
+        searchIndex.removeAll(keepingCapacity: false)
         let persistenceHandle = persistence
         persistenceQueue.sync {
             try? persistenceHandle.save(items: [])
@@ -612,8 +625,20 @@ final class HistoryStore: ObservableObject {
         while items.count > maxItems {
             let removed = items.removeLast()
             markItemDeleted(id: removed.id)
+            searchIndex.removeValue(forKey: removed.id)
             removed.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
         }
+    }
+
+    private func rebuildSearchIndex() {
+        var index: [UUID: String] = [:]
+        index.reserveCapacity(items.count)
+
+        for item in items {
+            index[item.id] = item.searchableText
+        }
+
+        searchIndex = index
     }
 
     private func sortItems(_ values: [ClipboardItem]) -> [ClipboardItem] {

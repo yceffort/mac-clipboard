@@ -7,11 +7,14 @@ struct HistoryWindowView: View {
     @ObservedObject var pasteService: PasteService
 
     @State private var query = ""
+    @State private var debouncedQuery = ""
     @State private var selection: ClipboardItem.ID?
     @State private var isShowingClearConfirmation = false
 
+    private static let searchDebounceInterval: Duration = .milliseconds(150)
+
     private var filteredItems: [ClipboardItem] {
-        historyStore.search(matching: query)
+        historyStore.search(matching: debouncedQuery)
     }
 
     private var selectedItem: ClipboardItem? {
@@ -49,11 +52,22 @@ struct HistoryWindowView: View {
         } message: {
             Text("This removes all saved text and image items from \(AppMetadata.displayName).")
         }
+        .task(id: query) {
+            try? await Task.sleep(for: Self.searchDebounceInterval)
+
+            guard Task.isCancelled == false else {
+                return
+            }
+
+            if debouncedQuery != query {
+                debouncedQuery = query
+            }
+        }
         .onAppear {
             adoptFirstSelectionIfNeeded()
             pasteService.refreshAccessibilityPermission()
         }
-        .onChange(of: query) { _, _ in
+        .onChange(of: debouncedQuery) { _, _ in
             adoptFirstSelectionIfNeeded()
         }
         .onChange(of: historyStore.items) { _, _ in
@@ -121,7 +135,7 @@ struct HistoryWindowView: View {
                 .onChange(of: historyStore.items.first?.id) { _, _ in
                     scrollToNewestIfNeeded(using: proxy, animated: true)
                 }
-                .onChange(of: query) { _, _ in
+                .onChange(of: debouncedQuery) { _, _ in
                     if normalizedQuery.isEmpty {
                         scrollToNewestIfNeeded(using: proxy, animated: false)
                     }
@@ -215,7 +229,7 @@ struct HistoryWindowView: View {
     }
 
     private var normalizedQuery: String {
-        query.trimmingCharacters(in: .whitespacesAndNewlines)
+        debouncedQuery.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var defaultActionTitle: String {
