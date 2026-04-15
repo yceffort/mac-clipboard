@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.3] - 2026-04-15
+
+### Fixed
+
+- satisfy clipboard monitor release lint rules
+- 
+restore clipboard monitor release build
+
+### Changed
+
+- 
+move clipboard capture work off the main thread
+
+
 ## [0.3.2] - 2026-04-15
 
 ### Fixed
