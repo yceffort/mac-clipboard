@@ -570,14 +570,14 @@ final class HistoryStore: ObservableObject {
                 return
             }
 
-            let changes = self.extractPendingChanges()
+            let changes = extractPendingChanges()
             guard changes.upserts.isEmpty == false || changes.deletedIDs.isEmpty == false else {
                 return
             }
 
-            let persistence = self.persistence
+            let persistenceHandle = persistence
             Task.detached(priority: .utility) {
-                try? persistence.applyChanges(
+                try? persistenceHandle.applyChanges(
                     upserts: changes.upserts,
                     deletedIDs: changes.deletedIDs
                 )
