@@ -81,6 +81,40 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertEqual(store.items.map(\.id), [firstItem.id])
     }
 
+    func testSearchMatchesTextContentAfterCapture() {
+        let store = HistoryStore()
+        let helloItem = makeTextItem(
+            id: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
+            hash: "hash-a",
+            text: "Hello Swift"
+        )
+        let worldItem = makeTextItem(
+            id: "11111111-2222-3333-4444-555555555555",
+            hash: "hash-b",
+            text: "World"
+        )
+
+        store.capture(helloItem)
+        store.capture(worldItem)
+
+        let matches = store.search(matching: "swift")
+        XCTAssertEqual(matches.map(\.id), [helloItem.id])
+    }
+
+    func testSearchExcludesRemovedItem() {
+        let store = HistoryStore()
+        let helloItem = makeTextItem(
+            id: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
+            hash: "hash-a",
+            text: "Hello Swift"
+        )
+
+        store.capture(helloItem)
+        XCTAssertTrue(store.remove(helloItem))
+
+        XCTAssertTrue(store.search(matching: "swift").isEmpty)
+    }
+
     private func makeTextItem(id: String, hash: String, text: String) -> ClipboardItem {
         ClipboardItem(
             id: UUID(uuidString: id) ?? UUID(),

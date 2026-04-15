@@ -2,6 +2,57 @@ import Combine
 import Foundation
 import SQLite3
 
+private let insertSQL = """
+INSERT INTO clipboard_items (
+    id,
+    kind,
+    created_at,
+    last_used_at,
+    content_hash,
+    text_content,
+    image_path,
+    source_app_bundle_id,
+    is_pinned,
+    url_string,
+    file_paths_json,
+    html_content,
+    rich_text_path
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
+
+private let upsertSQL = """
+INSERT INTO clipboard_items (
+    id,
+    kind,
+    created_at,
+    last_used_at,
+    content_hash,
+    text_content,
+    image_path,
+    source_app_bundle_id,
+    is_pinned,
+    url_string,
+    file_paths_json,
+    html_content,
+    rich_text_path
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    kind = excluded.kind,
+    created_at = excluded.created_at,
+    last_used_at = excluded.last_used_at,
+    content_hash = excluded.content_hash,
+    text_content = excluded.text_content,
+    image_path = excluded.image_path,
+    source_app_bundle_id = excluded.source_app_bundle_id,
+    is_pinned = excluded.is_pinned,
+    url_string = excluded.url_string,
+    file_paths_json = excluded.file_paths_json,
+    html_content = excluded.html_content,
+    rich_text_path = excluded.rich_text_path
+"""
+
+private let deleteSQL = "DELETE FROM clipboard_items WHERE id = ?"
+
 struct HistoryPersistence {
     func loadItems() -> [ClipboardItem] {
         guard let database = openDatabase() else {
@@ -106,24 +157,6 @@ struct HistoryPersistence {
                 throw PersistenceError.clearFailed
             }
 
-            let insertSQL = """
-            INSERT INTO clipboard_items (
-                id,
-                kind,
-                created_at,
-                last_used_at,
-                content_hash,
-                text_content,
-                image_path,
-                source_app_bundle_id,
-                is_pinned,
-                url_string,
-                file_paths_json,
-                html_content,
-                rich_text_path
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
-
             var statement: OpaquePointer?
             guard sqlite3_prepare_v2(database, insertSQL, -1, &statement, nil) == SQLITE_OK else {
                 throw PersistenceError.prepareStatementFailed
@@ -134,26 +167,7 @@ struct HistoryPersistence {
             for item in items {
                 sqlite3_reset(statement)
                 sqlite3_clear_bindings(statement)
-
-                bindText(item.id.uuidString, to: statement, index: 1)
-                bindText(item.kind.rawValue, to: statement, index: 2)
-                sqlite3_bind_double(statement, 3, item.createdAt.timeIntervalSince1970)
-
-                if let lastUsedAt = item.lastUsedAt {
-                    sqlite3_bind_double(statement, 4, lastUsedAt.timeIntervalSince1970)
-                } else {
-                    sqlite3_bind_null(statement, 4)
-                }
-
-                bindText(item.contentHash, to: statement, index: 5)
-                bindOptionalText(item.textContent, to: statement, index: 6)
-                bindOptionalText(item.imagePath, to: statement, index: 7)
-                bindOptionalText(item.sourceAppBundleID, to: statement, index: 8)
-                sqlite3_bind_int(statement, 9, item.isPinned ? 1 : 0)
-                bindOptionalText(item.urlString, to: statement, index: 10)
-                bindText(encodeJSONTextArray(item.filePaths), to: statement, index: 11)
-                bindOptionalText(item.htmlContent, to: statement, index: 12)
-                bindOptionalText(item.richTextPath, to: statement, index: 13)
+                bindItem(item, to: statement)
 
                 guard sqlite3_step(statement) == SQLITE_DONE else {
                     throw PersistenceError.insertFailed
@@ -167,6 +181,98 @@ struct HistoryPersistence {
             _ = execute(sql: "ROLLBACK TRANSACTION", in: database)
             throw error
         }
+    }
+
+    /// Applies an incremental change set to the database without rewriting unaffected rows.
+    ///
+    /// `save(items:)` deletes and reinserts every row on every call, which is fine for a full
+    /// rewrite but wasteful when a single item has changed. Callers that can describe the
+    /// diff (newly added items, edited rows, removed ids) should use this method so the
+    /// transaction only touches the affected rows.
+    func applyChanges(upserts: [ClipboardItem], deletedIDs: [UUID]) throws {
+        guard upserts.isEmpty == false || deletedIDs.isEmpty == false else {
+            return
+        }
+
+        guard let database = openDatabase() else {
+            throw PersistenceError.openDatabaseFailed
+        }
+
+        defer { sqlite3_close(database) }
+        initializeSchema(in: database)
+
+        guard execute(sql: "BEGIN IMMEDIATE TRANSACTION", in: database) else {
+            throw PersistenceError.transactionFailed
+        }
+
+        do {
+            if deletedIDs.isEmpty == false {
+                var deleteStatement: OpaquePointer?
+                guard sqlite3_prepare_v2(database, deleteSQL, -1, &deleteStatement, nil) == SQLITE_OK else {
+                    throw PersistenceError.prepareStatementFailed
+                }
+
+                defer { sqlite3_finalize(deleteStatement) }
+
+                for id in deletedIDs {
+                    sqlite3_reset(deleteStatement)
+                    sqlite3_clear_bindings(deleteStatement)
+                    bindText(id.uuidString, to: deleteStatement, index: 1)
+
+                    guard sqlite3_step(deleteStatement) == SQLITE_DONE else {
+                        throw PersistenceError.deleteFailed
+                    }
+                }
+            }
+
+            if upserts.isEmpty == false {
+                var upsertStatement: OpaquePointer?
+                guard sqlite3_prepare_v2(database, upsertSQL, -1, &upsertStatement, nil) == SQLITE_OK else {
+                    throw PersistenceError.prepareStatementFailed
+                }
+
+                defer { sqlite3_finalize(upsertStatement) }
+
+                for item in upserts {
+                    sqlite3_reset(upsertStatement)
+                    sqlite3_clear_bindings(upsertStatement)
+                    bindItem(item, to: upsertStatement)
+
+                    guard sqlite3_step(upsertStatement) == SQLITE_DONE else {
+                        throw PersistenceError.insertFailed
+                    }
+                }
+            }
+
+            guard execute(sql: "COMMIT TRANSACTION", in: database) else {
+                throw PersistenceError.transactionFailed
+            }
+        } catch {
+            _ = execute(sql: "ROLLBACK TRANSACTION", in: database)
+            throw error
+        }
+    }
+
+    private func bindItem(_ item: ClipboardItem, to statement: OpaquePointer?) {
+        bindText(item.id.uuidString, to: statement, index: 1)
+        bindText(item.kind.rawValue, to: statement, index: 2)
+        sqlite3_bind_double(statement, 3, item.createdAt.timeIntervalSince1970)
+
+        if let lastUsedAt = item.lastUsedAt {
+            sqlite3_bind_double(statement, 4, lastUsedAt.timeIntervalSince1970)
+        } else {
+            sqlite3_bind_null(statement, 4)
+        }
+
+        bindText(item.contentHash, to: statement, index: 5)
+        bindOptionalText(item.textContent, to: statement, index: 6)
+        bindOptionalText(item.imagePath, to: statement, index: 7)
+        bindOptionalText(item.sourceAppBundleID, to: statement, index: 8)
+        sqlite3_bind_int(statement, 9, item.isPinned ? 1 : 0)
+        bindOptionalText(item.urlString, to: statement, index: 10)
+        bindText(encodeJSONTextArray(item.filePaths), to: statement, index: 11)
+        bindOptionalText(item.htmlContent, to: statement, index: 12)
+        bindOptionalText(item.richTextPath, to: statement, index: 13)
     }
 
     private func openDatabase() -> OpaquePointer? {
@@ -301,6 +407,7 @@ private enum PersistenceError: Error {
     case clearFailed
     case prepareStatementFailed
     case insertFailed
+    case deleteFailed
 }
 
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
@@ -311,12 +418,30 @@ final class HistoryStore: ObservableObject {
 
     private let persistence = HistoryPersistence()
     private let assetStore = ClipboardAssetStore()
+    private let persistenceQueue = DispatchQueue(
+        label: "com.yceffort.clipboard.history-persistence",
+        qos: .utility
+    )
     private var maxItems = 200
     private var pendingPersistTask: Task<Void, Never>?
+
+    /// Cached lowercased searchable text keyed by item id.
+    ///
+    /// The model's `searchableText` property joins several strings and lowercases them,
+    /// which was previously recomputed for every item on every keystroke. Caching it per
+    /// item avoids the repeated allocation + case folding work during filtering.
+    private var searchIndex: [UUID: String] = [:]
+
+    /// Ids of items whose row contents should be re-written on the next persist flush.
+    private var pendingUpsertIDs: Set<UUID> = []
+
+    /// Ids of items that should be deleted from the database on the next persist flush.
+    private var pendingDeleteIDs: Set<UUID> = []
 
     func loadPersistedItems() {
         items = sortItems(persistence.loadItems())
         enforceItemLimit()
+        rebuildSearchIndex()
     }
 
     func capture(_ item: ClipboardItem) {
@@ -331,6 +456,8 @@ final class HistoryStore: ObservableObject {
             let duplicate = nextItems.remove(at: duplicateIndex)
             capturedItem.isPinned = duplicate.isPinned
             capturedItem.lastUsedAt = duplicate.lastUsedAt
+            markItemDeleted(id: duplicate.id)
+            searchIndex.removeValue(forKey: duplicate.id)
 
             for oldAssetPath in duplicate.storedAssetPaths
                 where capturedItem.storedAssetPaths.contains(oldAssetPath) == false
@@ -344,10 +471,14 @@ final class HistoryStore: ObservableObject {
 
         while nextItems.count > maxItems {
             let removed = nextItems.removeLast()
+            markItemDeleted(id: removed.id)
+            searchIndex.removeValue(forKey: removed.id)
             removed.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
         }
 
         items = nextItems
+        markItemChanged(id: capturedItem.id)
+        searchIndex[capturedItem.id] = capturedItem.searchableText
         schedulePersist()
     }
 
@@ -358,6 +489,7 @@ final class HistoryStore: ObservableObject {
 
         items[itemIndex].lastUsedAt = Date()
         items = sortItems(items)
+        markItemChanged(id: item.id)
         schedulePersist()
     }
 
@@ -369,6 +501,7 @@ final class HistoryStore: ObservableObject {
         items[itemIndex].isPinned.toggle()
         items[itemIndex].lastUsedAt = Date()
         items = sortItems(items)
+        markItemChanged(id: item.id)
         schedulePersist()
     }
 
@@ -379,6 +512,8 @@ final class HistoryStore: ObservableObject {
         }
 
         let removedItem = items.remove(at: itemIndex)
+        markItemDeleted(id: removedItem.id)
+        searchIndex.removeValue(forKey: removedItem.id)
         removedItem.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
         schedulePersist()
         return true
@@ -395,26 +530,39 @@ final class HistoryStore: ObservableObject {
         }
 
         return items.filter { item in
-            item.searchableText.contains(normalizedQuery)
+            (searchIndex[item.id] ?? item.searchableText).contains(normalizedQuery)
         }
     }
 
     func persistNow() {
         pendingPersistTask?.cancel()
         pendingPersistTask = nil
-        try? persistence.save(items: items)
+        pendingUpsertIDs.removeAll(keepingCapacity: false)
+        pendingDeleteIDs.removeAll(keepingCapacity: false)
+
+        let snapshot = items
+        let persistenceHandle = persistence
+        persistenceQueue.sync {
+            try? persistenceHandle.save(items: snapshot)
+        }
     }
 
     func clearAll() {
         pendingPersistTask?.cancel()
         pendingPersistTask = nil
+        pendingUpsertIDs.removeAll(keepingCapacity: false)
+        pendingDeleteIDs.removeAll(keepingCapacity: false)
 
         for item in items {
             item.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
         }
 
         items = []
-        try? persistence.save(items: [])
+        searchIndex.removeAll(keepingCapacity: false)
+        let persistenceHandle = persistence
+        persistenceQueue.sync {
+            try? persistenceHandle.save(items: [])
+        }
     }
 
     func configure(maxItems: Int) {
@@ -423,20 +571,50 @@ final class HistoryStore: ObservableObject {
         schedulePersist()
     }
 
+    private func markItemChanged(id: UUID) {
+        pendingDeleteIDs.remove(id)
+        pendingUpsertIDs.insert(id)
+    }
+
+    private func markItemDeleted(id: UUID) {
+        pendingUpsertIDs.remove(id)
+        pendingDeleteIDs.insert(id)
+    }
+
     private func schedulePersist() {
         pendingPersistTask?.cancel()
-        let snapshot = items
 
-        pendingPersistTask = Task.detached(priority: .utility) {
+        pendingPersistTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(200))
 
-            guard Task.isCancelled == false else {
+            guard Task.isCancelled == false, let self else {
                 return
             }
 
-            let persistence = HistoryPersistence()
-            try? persistence.save(items: snapshot)
+            let changes = extractPendingChanges()
+            guard changes.upserts.isEmpty == false || changes.deletedIDs.isEmpty == false else {
+                return
+            }
+
+            let persistenceHandle = persistence
+            persistenceQueue.async {
+                try? persistenceHandle.applyChanges(
+                    upserts: changes.upserts,
+                    deletedIDs: changes.deletedIDs
+                )
+            }
         }
+    }
+
+    private func extractPendingChanges() -> (upserts: [ClipboardItem], deletedIDs: [UUID]) {
+        let upsertIDs = pendingUpsertIDs
+        let deletedIDs = pendingDeleteIDs
+        let upsertItems = items.filter { upsertIDs.contains($0.id) }
+
+        pendingUpsertIDs.removeAll(keepingCapacity: false)
+        pendingDeleteIDs.removeAll(keepingCapacity: false)
+
+        return (upsertItems, Array(deletedIDs))
     }
 
     private func enforceItemLimit() {
@@ -446,8 +624,21 @@ final class HistoryStore: ObservableObject {
 
         while items.count > maxItems {
             let removed = items.removeLast()
+            markItemDeleted(id: removed.id)
+            searchIndex.removeValue(forKey: removed.id)
             removed.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
         }
+    }
+
+    private func rebuildSearchIndex() {
+        var index: [UUID: String] = [:]
+        index.reserveCapacity(items.count)
+
+        for item in items {
+            index[item.id] = item.searchableText
+        }
+
+        searchIndex = index
     }
 
     private func sortItems(_ values: [ClipboardItem]) -> [ClipboardItem] {
