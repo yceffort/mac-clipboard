@@ -174,17 +174,19 @@ final class ClipboardMonitor {
         let assetStore = assetStore
         let deliverItem: @Sendable (ClipboardItem) -> Void = { [weak self] item in
             Task { @MainActor [weak self] in
-                guard let self else {
+                let loopProtector = self?.loopProtector
+
+                guard let historyStore = self?.historyStore else {
                     item.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
                     return
                 }
 
-                if self.loopProtector?.shouldIgnore(hash: item.contentHash) == true {
+                if loopProtector?.shouldIgnore(hash: item.contentHash) == true {
                     item.storedAssetPaths.forEach { assetStore.deleteAsset(at: $0) }
                     return
                 }
 
-                self.historyStore.capture(item)
+                historyStore.capture(item)
             }
         }
 
