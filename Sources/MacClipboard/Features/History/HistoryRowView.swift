@@ -57,7 +57,7 @@ struct HistoryRowView: View {
 
         case .image:
             if let imagePath = item.imagePath,
-               let image = NSImage(contentsOfFile: imagePath)
+               let image = ClipboardImageCache.shared.image(forPath: imagePath)
             {
                 Image(nsImage: image)
                     .resizable()
