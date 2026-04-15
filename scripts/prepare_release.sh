@@ -57,13 +57,29 @@ if [[ -n "${APPLE_SIGNING_IDENTITY:-}" && -n "${APPLE_NOTARY_KEY_ID:-}" && -n "$
   echo "$APPLE_NOTARY_KEY_BASE64" | base64 --decode > "$NOTARY_KEY_PATH"
   chmod 600 "$NOTARY_KEY_PATH"
 
-  /usr/bin/xcrun notarytool submit \
-    "$DMG_PATH" \
-    --key "$NOTARY_KEY_PATH" \
-    --key-id "$APPLE_NOTARY_KEY_ID" \
-    --issuer "$APPLE_NOTARY_ISSUER_ID" \
-    --wait
+  submission_output="$(
+    /usr/bin/xcrun notarytool submit \
+      "$DMG_PATH" \
+      --key "$NOTARY_KEY_PATH" \
+      --key-id "$APPLE_NOTARY_KEY_ID" \
+      --issuer "$APPLE_NOTARY_ISSUER_ID" \
+      --wait \
+      --output-format json
+  )"
 
-  /usr/bin/xcrun stapler staple "$APP_PATH"
+  submission_id="$(printf '%s' "$submission_output" | /usr/bin/plutil -extract id raw -)"
+  submission_status="$(printf '%s' "$submission_output" | /usr/bin/plutil -extract status raw -)"
+  printf '%s\n' "$submission_output"
+
+  if [[ "$submission_status" != "Accepted" ]]; then
+    /usr/bin/xcrun notarytool log \
+      "$submission_id" \
+      --key "$NOTARY_KEY_PATH" \
+      --key-id "$APPLE_NOTARY_KEY_ID" \
+      --issuer "$APPLE_NOTARY_ISSUER_ID"
+    exit 1
+  fi
+
   /usr/bin/xcrun stapler staple "$DMG_PATH"
+  /usr/bin/xcrun stapler validate "$DMG_PATH"
 fi
