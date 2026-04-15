@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-04-15
+
+### Changed
+
+- cache decoded clipboard thumbnails in memory
+
+
 ## [0.3.0] - 2026-04-14
 
 ### Added
