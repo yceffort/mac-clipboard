@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-04-16
+
+### Added
+
+- publish releases to Cloudflare R2 and Homebrew tap
+
+
+
 ## [0.2.0] - 2026-04-16
 
 ### Added
