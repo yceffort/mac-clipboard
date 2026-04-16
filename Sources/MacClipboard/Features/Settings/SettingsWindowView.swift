@@ -200,6 +200,7 @@ struct SettingsWindowView: View {
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(minWidth: 580, minHeight: 520)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 

@@ -10,6 +10,7 @@ final class PasteService: ObservableObject {
     private let toastService: ToastService
     private let loopProtector: ClipboardLoopProtector
     private var targetApplication: NSRunningApplication?
+    private var targetHasTextInput = false
     private let accessibilitySettingsURL =
         URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
     private var notificationObservers: [NSObjectProtocol] = []
@@ -54,14 +55,17 @@ final class PasteService: ObservableObject {
 
     func capturePotentialPasteTarget() {
         guard let frontmostApplication = NSWorkspace.shared.frontmostApplication else {
+            targetHasTextInput = false
             return
         }
 
         guard frontmostApplication.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            targetHasTextInput = false
             return
         }
 
         targetApplication = frontmostApplication
+        targetHasTextInput = canAutoPaste && focusedElementAcceptsPaste(in: frontmostApplication)
     }
 
     @discardableResult
@@ -195,6 +199,10 @@ final class PasteService: ObservableObject {
     private func scheduleAutoPaste() {
         let applicationToActivate = resolvedTargetApplication()
 
+        guard targetHasTextInput else {
+            return
+        }
+
         Task { @MainActor in
             if let applicationToActivate {
                 applicationToActivate.activate(options: [.activateIgnoringOtherApps])
@@ -210,6 +218,52 @@ final class PasteService: ObservableObject {
             triggerPasteShortcut()
         }
     }
+
+    private func focusedElementAcceptsPaste(in application: NSRunningApplication) -> Bool {
+        let appElement = AXUIElementCreateApplication(application.processIdentifier)
+
+        var focusedValue: CFTypeRef?
+        let focusedResult = AXUIElementCopyAttributeValue(
+            appElement,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedValue
+        )
+
+        guard focusedResult == .success, let focusedValue else {
+            return false
+        }
+
+        let focusedElement = focusedValue as! AXUIElement
+
+        var roleValue: CFTypeRef?
+        if AXUIElementCopyAttributeValue(
+            focusedElement,
+            kAXRoleAttribute as CFString,
+            &roleValue
+        ) == .success,
+            let role = roleValue as? String,
+            Self.textInputRoles.contains(role)
+        {
+            return true
+        }
+
+        var isSettable: DarwinBoolean = false
+        guard AXUIElementIsAttributeSettable(
+            focusedElement,
+            kAXValueAttribute as CFString,
+            &isSettable
+        ) == .success else {
+            return false
+        }
+
+        return isSettable.boolValue
+    }
+
+    private static let textInputRoles: Set<String> = [
+        NSAccessibility.Role.textField.rawValue,
+        NSAccessibility.Role.textArea.rawValue,
+        NSAccessibility.Role.comboBox.rawValue,
+    ]
 
     private func resolvedTargetApplication() -> NSRunningApplication? {
         if let targetApplication,

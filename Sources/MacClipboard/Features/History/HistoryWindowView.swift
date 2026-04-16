@@ -115,16 +115,10 @@ struct HistoryWindowView: View {
                         .tag(item.id)
                         .id(item.id)
                         .contentShape(Rectangle())
-                        .onTapGesture {
+                        .onTapGesture(count: 2) {
                             selection = item.id
+                            performDefaultAction(for: item)
                         }
-                        .simultaneousGesture(
-                            TapGesture(count: 2)
-                                .onEnded {
-                                    selection = item.id
-                                    performDefaultAction(for: item)
-                                }
-                        )
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -179,16 +173,12 @@ struct HistoryWindowView: View {
                             .keyboardShortcut(.defaultAction)
                             .buttonStyle(.bordered)
                             .controlSize(.small)
-                            .disabled(defaultActionRequiresAccessibilityPermission)
-                            .help("Accessibility permission is required to auto-paste into another app.")
 
                             Button(secondaryActionTitle) {
                                 performSecondaryAction(for: item)
                             }
                             .buttonStyle(.borderless)
                             .controlSize(.small)
-                            .disabled(secondaryActionRequiresAccessibilityPermission)
-                            .help("Accessibility permission is required to auto-paste into another app.")
                         }
                     }
 
@@ -238,14 +228,6 @@ struct HistoryWindowView: View {
 
     private var secondaryActionTitle: String {
         settingsStore.settings.autoPasteOnSelection ? "Copy" : "Paste"
-    }
-
-    private var defaultActionRequiresAccessibilityPermission: Bool {
-        settingsStore.settings.autoPasteOnSelection && pasteService.canAutoPaste == false
-    }
-
-    private var secondaryActionRequiresAccessibilityPermission: Bool {
-        settingsStore.settings.autoPasteOnSelection == false && pasteService.canAutoPaste == false
     }
 
     private func metadataLine(for item: ClipboardItem) -> some View {
@@ -371,7 +353,7 @@ struct HistoryWindowView: View {
         restore(
             item,
             autoPaste: shouldAutoPaste,
-            feedbackMessage: shouldAutoPaste ? nil : "복사되었습니다",
+            feedbackMessage: shouldAutoPaste ? nil : "Copied",
             closeWindowOnSuccess: true
         )
     }
@@ -381,7 +363,7 @@ struct HistoryWindowView: View {
             restore(
                 item,
                 autoPaste: false,
-                feedbackMessage: "복사되었습니다",
+                feedbackMessage: "Copied",
                 closeWindowOnSuccess: false
             )
         } else {

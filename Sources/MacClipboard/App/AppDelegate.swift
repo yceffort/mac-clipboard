@@ -185,7 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             pasteService.restore(
                 item: item,
                 autoPaste: false,
-                feedbackMessage: "복사되었습니다"
+                feedbackMessage: "Copied"
             )
         else {
             return
