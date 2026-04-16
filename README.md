@@ -15,8 +15,21 @@ It keeps clipboard history for text, images, URLs, files, HTML, and rich text, l
 
 ## Install
 
+### Homebrew (recommended)
+
+```bash
+brew tap yceffort/tap
+brew install --cask yc-clipboard
+```
+
+Upgrades pull the latest DMG via `brew upgrade --cask yc-clipboard`. The DMG is
+hosted on Cloudflare R2, so `brew` works even in networks that block
+`*.githubusercontent.com`.
+
+### Direct download
+
 - Latest release: [GitHub Releases](https://github.com/yceffort/mac-clipboard/releases)
-- Current packaged artifacts use the `yc.clipboard` name:
+- Packaged artifacts use the `yc.clipboard` name:
   - `yc.clipboard.app`
   - `yc.clipboard-<version>.zip`
   - `yc.clipboard-<version>.dmg`
