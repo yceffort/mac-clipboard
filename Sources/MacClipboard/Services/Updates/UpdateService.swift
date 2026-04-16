@@ -1,51 +1,15 @@
 import AppKit
 import Foundation
 
-private struct GitHubReleaseAsset: Decodable {
-    let name: String
-    let browserDownloadURL: URL
+private struct UpdateManifest: Decodable {
+    let version: String
+    let dmgURL: URL
+    let releaseNotesURL: URL
 
     private enum CodingKeys: String, CodingKey {
-        case name
-        case browserDownloadURL = "browser_download_url"
-    }
-}
-
-private struct GitHubRelease: Decodable {
-    let tagName: String
-    let htmlURL: URL
-    let assets: [GitHubReleaseAsset]
-
-    private enum CodingKeys: String, CodingKey {
-        case tagName = "tag_name"
-        case htmlURL = "html_url"
-        case assets
-    }
-
-    var versionString: String {
-        tagName.replacingOccurrences(of: "v", with: "", options: [.anchored, .caseInsensitive])
-    }
-
-    func preferredDownloadURL() -> URL? {
-        let expectedPrefix = "\(AppMetadata.displayName)-\(versionString)"
-
-        if let preferredDMG = assets.first(where: {
-            $0.name == "\(expectedPrefix).dmg"
-        }) {
-            return preferredDMG.browserDownloadURL
-        }
-
-        if let firstDMG = assets.first(where: { $0.name.hasSuffix(".dmg") }) {
-            return firstDMG.browserDownloadURL
-        }
-
-        if let preferredZip = assets.first(where: {
-            $0.name == "\(expectedPrefix).zip"
-        }) {
-            return preferredZip.browserDownloadURL
-        }
-
-        return assets.first(where: { $0.name.hasSuffix(".zip") })?.browserDownloadURL
+        case version
+        case dmgURL = "dmg_url"
+        case releaseNotesURL = "release_notes_url"
     }
 }
 
@@ -95,10 +59,10 @@ final class UpdateService {
         settingsStore.recordUpdateCheck(Date())
 
         do {
-            let release = try await fetchLatestRelease()
+            let manifest = try await fetchLatestManifest()
             guard
                 let currentVersion = AppVersion(AppMetadata.currentVersionString),
-                let latestVersion = AppVersion(release.versionString)
+                let latestVersion = AppVersion(manifest.version)
             else {
                 if userInitiated {
                     showInformationalAlert(
@@ -116,7 +80,7 @@ final class UpdateService {
 
                 if shouldPrompt {
                     presentUpdateAlert(
-                        release: release,
+                        manifest: manifest,
                         currentVersion: currentVersion.description,
                         latestVersion: latestVersion.description
                     )
@@ -131,7 +95,7 @@ final class UpdateService {
             if userInitiated {
                 showInformationalAlert(
                     title: "Update Check Failed",
-                    message: "The app could not reach GitHub Releases right now. Please try again later."
+                    message: "The app could not reach the update feed right now. Please try again later."
                 )
             }
         }
@@ -139,9 +103,10 @@ final class UpdateService {
         scheduleAutomaticChecks()
     }
 
-    private func fetchLatestRelease() async throws -> GitHubRelease {
-        var request = URLRequest(url: AppMetadata.latestReleaseAPIURL)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+    private func fetchLatestManifest() async throws -> UpdateManifest {
+        var request = URLRequest(url: AppMetadata.updateManifestURL)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(AppMetadata.displayName, forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await session.data(for: request)
@@ -153,11 +118,11 @@ final class UpdateService {
             throw UpdateCheckError.badServerResponse
         }
 
-        return try JSONDecoder().decode(GitHubRelease.self, from: data)
+        return try JSONDecoder().decode(UpdateManifest.self, from: data)
     }
 
     private func presentUpdateAlert(
-        release: GitHubRelease,
+        manifest: UpdateManifest,
         currentVersion: String,
         latestVersion: String
     ) {
@@ -168,7 +133,7 @@ final class UpdateService {
         alert.messageText = "Update Available"
         alert.informativeText =
             "\(AppMetadata.displayName) \(latestVersion) is available. You're currently on \(currentVersion)."
-        alert.addButton(withTitle: release.preferredDownloadURL() == nil ? "View Release" : "Download DMG")
+        alert.addButton(withTitle: "Download DMG")
         alert.addButton(withTitle: "Release Notes")
         alert.addButton(withTitle: "Later")
 
@@ -176,15 +141,11 @@ final class UpdateService {
 
         switch response {
         case .alertFirstButtonReturn:
-            if let downloadURL = release.preferredDownloadURL() {
-                NSWorkspace.shared.open(downloadURL)
-            } else {
-                NSWorkspace.shared.open(release.htmlURL)
-            }
+            NSWorkspace.shared.open(manifest.dmgURL)
             settingsStore.dismissUpdateVersion(nil)
 
         case .alertSecondButtonReturn:
-            NSWorkspace.shared.open(release.htmlURL)
+            NSWorkspace.shared.open(manifest.releaseNotesURL)
             settingsStore.dismissUpdateVersion(nil)
 
         default:

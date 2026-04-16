@@ -17,8 +17,8 @@ enum AppMetadata {
         URL(string: "https://github.com/\(repositoryFullName)/releases")!
     }
 
-    static var latestReleaseAPIURL: URL {
-        URL(string: "https://api.github.com/repos/\(repositoryFullName)/releases/latest")!
+    static var updateManifestURL: URL {
+        URL(string: "https://pub-b87491bc9baf429abd92d5d2c8c8f3cc.r2.dev/latest.json")!
     }
 
     static var currentVersionString: String {

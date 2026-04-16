@@ -20,6 +20,10 @@ if [[ ! -f "$DMG_PATH" ]]; then
   exit 1
 fi
 
+TAP_DIR="$(mktemp -d)"
+MANIFEST_PATH="$(mktemp -t latest_json.XXXXXX)"
+trap 'rm -rf "$TAP_DIR" "$MANIFEST_PATH"' EXIT
+
 R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 DOWNLOAD_URL="${R2_PUBLIC_BASE_URL%/}/${DMG_NAME}"
 
@@ -35,8 +39,22 @@ SHA256="$(shasum -a 256 "$DMG_PATH" | cut -d' ' -f1)"
 echo "SHA256: $SHA256"
 echo "Download URL: $DOWNLOAD_URL"
 
-TAP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TAP_DIR"' EXIT
+cat > "$MANIFEST_PATH" <<EOF
+{
+  "version": "${VERSION}",
+  "dmg_url": "${DOWNLOAD_URL}",
+  "release_notes_url": "https://github.com/yceffort/mac-clipboard/releases/tag/v${VERSION}"
+}
+EOF
+
+echo "Uploading latest.json to R2"
+AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+AWS_DEFAULT_REGION="auto" \
+  aws s3 cp "$MANIFEST_PATH" "s3://${R2_BUCKET}/latest.json" \
+    --endpoint-url "$R2_ENDPOINT" \
+    --content-type "application/json" \
+    --cache-control "no-cache"
 
 echo "Cloning homebrew-tap"
 git clone \
