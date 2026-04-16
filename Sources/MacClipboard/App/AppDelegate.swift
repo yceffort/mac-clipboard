@@ -181,13 +181,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func copyRecentItem(_ item: ClipboardItem) {
-        guard
-            pasteService.restore(
-                item: item,
-                autoPaste: false,
-                feedbackMessage: "Copied"
-            )
-        else {
+        guard pasteService.restore(item: item, autoPaste: false) else {
             return
         }
 

@@ -115,10 +115,13 @@ struct HistoryWindowView: View {
                         .tag(item.id)
                         .id(item.id)
                         .contentShape(Rectangle())
-                        .onTapGesture(count: 2) {
-                            selection = item.id
-                            performDefaultAction(for: item)
-                        }
+                        .simultaneousGesture(
+                            TapGesture(count: 2)
+                                .onEnded {
+                                    selection = item.id
+                                    performDefaultAction(for: item)
+                                }
+                        )
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -353,7 +356,6 @@ struct HistoryWindowView: View {
         restore(
             item,
             autoPaste: shouldAutoPaste,
-            feedbackMessage: shouldAutoPaste ? nil : "Copied",
             closeWindowOnSuccess: true
         )
     }
@@ -363,14 +365,12 @@ struct HistoryWindowView: View {
             restore(
                 item,
                 autoPaste: false,
-                feedbackMessage: "Copied",
                 closeWindowOnSuccess: false
             )
         } else {
             restore(
                 item,
                 autoPaste: true,
-                feedbackMessage: nil,
                 closeWindowOnSuccess: true
             )
         }
@@ -379,14 +379,12 @@ struct HistoryWindowView: View {
     private func restore(
         _ item: ClipboardItem,
         autoPaste: Bool,
-        feedbackMessage: String? = nil,
         closeWindowOnSuccess: Bool = false
     ) {
         guard
             pasteService.restore(
                 item: item,
-                autoPaste: autoPaste,
-                feedbackMessage: feedbackMessage
+                autoPaste: autoPaste
             )
         else {
             return

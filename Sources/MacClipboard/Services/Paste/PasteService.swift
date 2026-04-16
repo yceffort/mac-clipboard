@@ -69,7 +69,7 @@ final class PasteService: ObservableObject {
     }
 
     @discardableResult
-    func restore(item: ClipboardItem, autoPaste: Bool, feedbackMessage: String? = nil) -> Bool {
+    func restore(item: ClipboardItem, autoPaste: Bool) -> Bool {
         let pasteboard = NSPasteboard.general
         loopProtector.registerRestoredHash(item.contentHash)
         pasteboard.clearContents()
@@ -129,15 +129,12 @@ final class PasteService: ObservableObject {
             }
         }
 
-        if let feedbackMessage {
-            toastService.show(message: feedbackMessage)
-        }
+        let willPaste = autoPaste && canAutoPaste && targetHasTextInput
+        toastService.show(message: willPaste ? "Pasted" : "Copied")
 
-        guard autoPaste, canAutoPaste else {
-            return true
+        if willPaste {
+            scheduleAutoPaste()
         }
-
-        scheduleAutoPaste()
         return true
     }
 
