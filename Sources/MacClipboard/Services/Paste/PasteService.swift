@@ -233,6 +233,9 @@ final class PasteService: ObservableObject {
             return false
         }
 
+        // AXUIElement is a CoreFoundation type — conditional downcast always succeeds,
+        // and force cast is the canonical pattern for CFTypeRef → AXUIElement.
+        // swiftlint:disable:next force_cast
         let focusedElement = focusedValue as! AXUIElement
 
         var roleValue: CFTypeRef?
