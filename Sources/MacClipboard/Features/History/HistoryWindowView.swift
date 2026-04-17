@@ -114,18 +114,21 @@ struct HistoryWindowView: View {
                     HistoryRowView(item: item)
                         .tag(item.id)
                         .id(item.id)
-                        .contentShape(Rectangle())
-                        .simultaneousGesture(
-                            TapGesture(count: 2)
-                                .onEnded {
-                                    selection = item.id
-                                    performDefaultAction(for: item)
-                                }
-                        )
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
+                .background(
+                    TableRowDoubleClickMonitor { rowIndex in
+                        guard filteredItems.indices.contains(rowIndex) else {
+                            return
+                        }
+
+                        let item = filteredItems[rowIndex]
+                        selection = item.id
+                        performDefaultAction(for: item)
+                    }
+                )
                 .onAppear {
                     scrollToNewestIfNeeded(using: proxy, animated: false)
                 }
