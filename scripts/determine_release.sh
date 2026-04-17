@@ -83,6 +83,7 @@ else
 fi
 
 while IFS=$'\x1f' read -r -d $'\x1e' subject body; do
+  subject="${subject#$'\n'}"
   [[ -z "$subject" ]] && continue
 
   commit_type="$(printf '%s' "$subject" | sed -nE 's/^([a-z]+)(\([^)]+\))?(!)?: .*/\1/p')"
