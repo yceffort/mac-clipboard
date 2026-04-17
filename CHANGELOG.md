@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-04-17
+
+### Added
+
+- add Cmd+1-9 quick paste with shortcut hint badges
+- user-selectable app exclusion via NSOpenPanel
+
+### Fixed
+
+- restore reliable double-click via AppKit monitor
+
+
+
 ## [0.4.1] - 2026-04-16
 
 ### Fixed
