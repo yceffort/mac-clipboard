@@ -67,65 +67,6 @@ enum AppearancePreference: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-enum IgnoredAppPreset: String, CaseIterable, Identifiable {
-    case onePassword
-    case bitwarden
-    case terminal
-    case iTerm
-
-    var id: String {
-        rawValue
-    }
-
-    var title: String {
-        switch self {
-        case .onePassword:
-            "1Password"
-        case .bitwarden:
-            "Bitwarden"
-        case .terminal:
-            "Terminal"
-        case .iTerm:
-            "iTerm"
-        }
-    }
-
-    var detail: String {
-        switch self {
-        case .onePassword:
-            "Ignore copies made while 1Password is frontmost."
-        case .bitwarden:
-            "Ignore copies made while Bitwarden is frontmost."
-        case .terminal:
-            "Ignore copies made while Terminal is frontmost."
-        case .iTerm:
-            "Ignore copies made while iTerm is frontmost."
-        }
-    }
-
-    var bundleIDs: [String] {
-        switch self {
-        case .onePassword:
-            [
-                "com.1password.1password",
-                "com.agilebits.onepassword7",
-            ]
-        case .bitwarden:
-            [
-                "com.bitwarden.desktop",
-            ]
-        case .terminal:
-            [
-                "com.apple.Terminal",
-            ]
-        case .iTerm:
-            [
-                "com.googlecode.iterm2",
-            ]
-        }
-    }
-}
-
 struct AppSettings: Codable {
     var maxHistoryCount: Int = 200
     var autoPasteOnSelection: Bool = true
@@ -174,33 +115,28 @@ final class AppSettingsStore: ObservableObject {
         settings = persistence.load()
     }
 
-    func isIgnored(_ preset: IgnoredAppPreset) -> Bool {
-        let ignored = Set(settings.ignoredAppBundleIDs)
-        return preset.bundleIDs.allSatisfy(ignored.contains)
-    }
-
-    func setIgnored(_ preset: IgnoredAppPreset, enabled: Bool) {
-        var ignored = Set(settings.ignoredAppBundleIDs)
-
-        if enabled {
-            for bundleID in preset.bundleIDs {
-                ignored.insert(bundleID)
-            }
-        } else {
-            for bundleID in preset.bundleIDs {
-                ignored.remove(bundleID)
-            }
-        }
-
-        settings.ignoredAppBundleIDs = ignored.sorted()
-    }
-
     func shouldIgnore(bundleID: String?) -> Bool {
         guard let bundleID else {
             return false
         }
 
         return settings.ignoredAppBundleIDs.contains(bundleID)
+    }
+
+    func addIgnoredApp(bundleID: String) {
+        let trimmed = bundleID.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard trimmed.isEmpty == false else {
+            return
+        }
+
+        var ignored = Set(settings.ignoredAppBundleIDs)
+        ignored.insert(trimmed)
+        settings.ignoredAppBundleIDs = ignored.sorted()
+    }
+
+    func removeIgnoredApp(bundleID: String) {
+        settings.ignoredAppBundleIDs.removeAll { $0 == bundleID }
     }
 
     func recordUpdateCheck(_ date: Date) {

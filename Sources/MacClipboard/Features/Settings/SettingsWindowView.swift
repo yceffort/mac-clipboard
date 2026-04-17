@@ -157,25 +157,7 @@ struct SettingsWindowView: View {
 
                         Divider()
 
-                        ForEach(Array(IgnoredAppPreset.allCases.enumerated()), id: \.element.id) { index, preset in
-                            Toggle(
-                                isOn: Binding(
-                                    get: { settingsStore.isIgnored(preset) },
-                                    set: { settingsStore.setIgnored(preset, enabled: $0) }
-                                )
-                            ) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(preset.title)
-                                    Text(preset.detail)
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            if index < IgnoredAppPreset.allCases.count - 1 {
-                                Divider()
-                            }
-                        }
+                        IgnoredAppList(settingsStore: settingsStore)
                     }
                 }
 

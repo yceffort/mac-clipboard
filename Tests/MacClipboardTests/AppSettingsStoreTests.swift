@@ -14,18 +14,35 @@ final class AppSettingsStoreTests: XCTestCase {
         try super.tearDownWithError()
     }
 
-    func testIgnoredPresetAddsAndRemovesAllBundleIDs() {
+    func testIgnoredAppCanBeAddedAndRemoved() {
         let store = AppSettingsStore()
 
-        store.setIgnored(.terminal, enabled: true)
+        store.addIgnoredApp(bundleID: "com.apple.Terminal")
 
-        XCTAssertTrue(store.isIgnored(.terminal))
         XCTAssertTrue(store.shouldIgnore(bundleID: "com.apple.Terminal"))
+        XCTAssertEqual(store.settings.ignoredAppBundleIDs, ["com.apple.Terminal"])
 
-        store.setIgnored(.terminal, enabled: false)
+        store.removeIgnoredApp(bundleID: "com.apple.Terminal")
 
-        XCTAssertFalse(store.isIgnored(.terminal))
         XCTAssertFalse(store.shouldIgnore(bundleID: "com.apple.Terminal"))
+        XCTAssertTrue(store.settings.ignoredAppBundleIDs.isEmpty)
+    }
+
+    func testAddingSameBundleIDTwiceKeepsUniqueEntry() {
+        let store = AppSettingsStore()
+
+        store.addIgnoredApp(bundleID: "com.apple.Terminal")
+        store.addIgnoredApp(bundleID: "com.apple.Terminal")
+
+        XCTAssertEqual(store.settings.ignoredAppBundleIDs, ["com.apple.Terminal"])
+    }
+
+    func testAddingBlankBundleIDIsIgnored() {
+        let store = AppSettingsStore()
+
+        store.addIgnoredApp(bundleID: "   ")
+
+        XCTAssertTrue(store.settings.ignoredAppBundleIDs.isEmpty)
     }
 
     func testUpdateBookkeepingPersistsInMemoryState() {
