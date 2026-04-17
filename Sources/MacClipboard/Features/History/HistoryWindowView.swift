@@ -110,10 +110,15 @@ struct HistoryWindowView: View {
                 )
 
             ScrollViewReader { proxy in
-                List(filteredItems, selection: $selection) { item in
-                    HistoryRowView(item: item)
+                List(selection: $selection) {
+                    ForEach(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
+                        HistoryRowView(
+                            item: item,
+                            shortcutHint: index < 9 ? "⌘\(index + 1)" : nil
+                        )
                         .tag(item.id)
                         .id(item.id)
+                    }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -125,6 +130,18 @@ struct HistoryWindowView: View {
                         }
 
                         let item = filteredItems[rowIndex]
+                        selection = item.id
+                        performDefaultAction(for: item)
+                    }
+                )
+                .background(
+                    QuickPasteKeyMonitor { number in
+                        let index = number - 1
+                        guard filteredItems.indices.contains(index) else {
+                            return
+                        }
+
+                        let item = filteredItems[index]
                         selection = item.id
                         performDefaultAction(for: item)
                     }
@@ -142,7 +159,7 @@ struct HistoryWindowView: View {
                 }
             }
 
-            Text("Press Enter to use the default action for the selected item.")
+            Text("Press Enter for the selected item, or ⌘1–⌘9 for the top nine.")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
         }

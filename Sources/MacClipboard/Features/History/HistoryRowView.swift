@@ -3,6 +3,7 @@ import SwiftUI
 
 struct HistoryRowView: View {
     let item: ClipboardItem
+    var shortcutHint: String?
 
     private var separatorColor: Color {
         Color(nsColor: .separatorColor).opacity(0.5)
@@ -34,6 +35,23 @@ struct HistoryRowView: View {
                     .font(.system(size: 10, weight: .medium))
                     .monospacedDigit()
                     .foregroundStyle(.tertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let shortcutHint {
+                Text(shortcutHint)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color(nsColor: .textBackgroundColor).opacity(0.4))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(separatorColor, lineWidth: 0.5)
+                    )
             }
         }
         .padding(.vertical, 6)
