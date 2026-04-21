@@ -146,6 +146,16 @@ struct HistoryWindowView: View {
                         performDefaultAction(for: item)
                     }
                 )
+                .background(
+                    EnterKeyMonitor {
+                        guard let item = resolvedSelectedItem() else {
+                            return
+                        }
+
+                        selection = item.id
+                        performDefaultAction(for: item)
+                    }
+                )
                 .onAppear {
                     scrollToNewestIfNeeded(using: proxy, animated: false)
                 }
@@ -193,7 +203,6 @@ struct HistoryWindowView: View {
                             Button(defaultActionTitle) {
                                 performDefaultAction(for: item)
                             }
-                            .keyboardShortcut(.defaultAction)
                             .buttonStyle(.bordered)
                             .controlSize(.small)
 
@@ -228,6 +237,16 @@ struct HistoryWindowView: View {
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func resolvedSelectedItem() -> ClipboardItem? {
+        let items = filteredItems
+
+        if let selection, let match = items.first(where: { $0.id == selection }) {
+            return match
+        }
+
+        return items.first
     }
 
     private func adoptFirstSelectionIfNeeded() {
