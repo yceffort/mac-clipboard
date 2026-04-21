@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] - 2026-04-21
+
+### Fixed
+
+- ignore Enter key events when any modifier is held
+- paste the selected item on Enter via AppKit key monitor
+
+
+
 ## [0.5.0] - 2026-04-17
 
 ### Added
