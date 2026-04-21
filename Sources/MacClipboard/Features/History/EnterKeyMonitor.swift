@@ -55,7 +55,7 @@ struct EnterKeyMonitor: NSViewRepresentable {
                 let hostWindow = window,
                 event.window === hostWindow,
                 hostWindow.isKeyWindow,
-                event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty,
+                event.modifierFlags.isDisjoint(with: [.command, .option, .shift, .control]),
                 event.keyCode == UInt16(kVK_Return) || event.keyCode == UInt16(kVK_ANSI_KeypadEnter)
             else {
                 return event
